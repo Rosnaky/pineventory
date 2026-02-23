@@ -1,20 +1,25 @@
 
+import asyncio
+
 import discord
 from discord.ext import commands
 import sqlite3
 import os
-from utils.logger import logger
+from app.bot import Bot
+from app.config import DISCORD_TOKEN
+from app.utils.logger import logger
 
 
-def init():
+async def main():
     global bot
 
-    intents = discord.Intents.default()
-    intents.message_content = True
-    bot = commands.Bot(command_prefix='/', intents=intents)
+    bot = Bot()
+    async with bot:
+        await bot.start(DISCORD_TOKEN)
+
 
     logger.info("Initialization successful")
 
 
 if __name__ == "__main__":
-    init()
+    asyncio.run(main())

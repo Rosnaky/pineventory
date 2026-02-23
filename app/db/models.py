@@ -94,7 +94,7 @@ class UpdateItemRequest(BaseModel):
     item_name: Optional[str] = Field(None, min_length=1, max_length=200)
     quantity_total: Optional[int] = Field(None, ge=0)
     location: Optional[str] = Field(None, min_length=1, max_length=100)
-    subteam: Optional[str] = Field(None, min_length=1, max_length=100)
+    subteam: Optional[Subteam] = Field(None, min_length=1, max_length=100)
     point_of_contact: Optional[int] = None
     purchase_order: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = Field(None, max_length=1000)
