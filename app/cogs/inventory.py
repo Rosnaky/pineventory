@@ -103,7 +103,7 @@ class Inventory(commands.Cog):
     ):
         await interaction.response.defer()
 
-        items = await self.db.serach_items(search, subteam, location)
+        items = await self.db.search_items(search, subteam, location)
 
         if not items:
             await interaction.followup.send("No items found with your criteria")

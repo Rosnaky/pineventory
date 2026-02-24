@@ -2,7 +2,7 @@
 from typing import List, Optional
 
 import asyncpg
-from app.db.models import AuditLog, Checkout, CheckoutRequest, CreateItemRequest, InventoryStats, Item, UpdateItemRequest, User
+from app.db.models import AuditLog, Checkout, CheckoutRequest, CreateItemRequest, GuildPermission, InventoryStats, Item, UpdateItemRequest, User
 from app.error.exceptions import DatabaseNotInitializedError
 from app.utils.logger import logger
 
@@ -40,6 +40,19 @@ class DatabaseManager:
                 DO UPDATE SET username = $2
             """, user_id, username)
 
+    async def ensure_guild_member(self, user_id: int, guild_id: int, username: str):
+        if not self.pool:
+            raise DatabaseNotInitializedError()
+        
+        async with self.pool.acquire() as conn:
+            await self.ensure_user_exists(user_id, username)
+
+            await conn.execute("""
+                INSERT INTO guild_permissions (user_id, guild_id, is_admin)
+                VALUES ($1, $2, FALSE)
+                ON CONFLICT (guild_id, user_id) DO NOTHING
+            """, user_id, guild_id)
+
     async def get_user(self, user_id: int) -> Optional[User]:
         if not self.pool:
             raise DatabaseNotInitializedError()
@@ -50,16 +63,50 @@ class DatabaseManager:
                 user_id
             )
             return User.from_record(row) if row else None
+
+    async def get_user_permissions(self, guild_id: int, user_id: int) -> Optional[GuildPermission]:
+        if not self.pool:
+            raise DatabaseNotInitializedError()
         
-    async def set_admin(self, user_id: int, is_admin: bool):
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * from guild_permissions where user_id = $1 AND guild_id = $2",
+                user_id, guild_id
+            )
+            return GuildPermission.from_record(row) if row else None
+
+    async def is_admin(self, guild_id: int, user_id: int) -> bool:
+        perms = await self.get_user_permissions(guild_id, user_id)
+        return perms.is_admin if perms else False
+
+    async def set_admin(self, guild_id: int, user_id: int, is_admin: bool):
         if not self.pool:
             raise DatabaseNotInitializedError()
         
         async with self.pool.acquire() as conn:
             await conn.execute(
-                "UPDATE users SET is_admin = $2 WHERE user_id = $1",
+                """
+                    INSERT INTO guild_permissions (guild_id, user_id, is_admin)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (guild_id, user_id)
+                    DO UPDATE SET is_admin = $3, updated_at = NOW()
+                """, 
                 user_id, is_admin
             )
+
+    async def get_guild_admins(self, guild_id: int) -> List[GuildPermission]:
+        if not self.pool:
+            raise DatabaseNotInitializedError()
+        
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch('''
+                SELECT gp.*, u.username
+                FROM guild_permissions gp
+                JOIN users u ON gp.user_id = u.user_id
+                WHERE gp.guild_id = $1 AND gp.is_admin = TRUE
+                ORDER BY u.username
+            ''', guild_id)
+            return [GuildPermission.from_record(row) for row in rows]
 
     # ===== Item =====
 

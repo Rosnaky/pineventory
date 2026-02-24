@@ -14,7 +14,6 @@ class Subteam(str, Enum):
 class User(BaseModel):
     user_id: int
     username: str
-    is_admin: bool = False
     created_at: Optional[datetime] = None
 
     class Config:
@@ -24,6 +23,33 @@ class User(BaseModel):
     def from_record(cls, record):
         return cls(**dict(record))
     
+class GuildPermission(BaseModel):
+    id: int
+    guild_id: int = Field(description="Discord server/guild id")
+    user_id: int = Field(description="Discord user id")
+    is_admin: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+    @classmethod
+    def from_record(cls, record):
+        return cls(**record)
+
+class UserWithPermissions(BaseModel):
+    user_id: int
+    username: str
+    is_admin: bool = False
+
+    @classmethod
+    def from_records(cls, user_record, permission_record=None):
+        return cls(
+            user_id=user_record["user_id"],
+            username=user_record["username"],
+            is_admin=permission_record["is_admin"] if permission_record else False
+        )
 
 class Item(BaseModel):
     id: int
