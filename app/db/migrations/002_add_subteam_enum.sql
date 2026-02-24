@@ -1,7 +1,7 @@
 -- database/migrations/002_add_subteam_enum.sql
 
 -- Create the enum type
-CREATE TYPE subteam_type AS ENUM ('mechanical', 'electrical', 'efs', 'autonomy', 'operations');
+CREATE TYPE subteam_type AS ENUM ('mechanical', 'electrical', 'embedded flight software', 'autonomy', 'operations');
 
 -- Alter the items table to use the enum
 ALTER TABLE items 

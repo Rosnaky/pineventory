@@ -94,6 +94,12 @@ class Inventory(commands.Cog):
         subteam="Filter by subteam",
         location="Filter by location"
     )
+    @app_commands.choices(
+        subteam=[
+            app_commands.Choice(name=member.value.title(), value=member.value)
+            for member in Subteam
+        ]
+    )
     async def view_inventory(
         self,
         interaction: discord.Interaction,
@@ -180,6 +186,12 @@ class Inventory(commands.Cog):
         purchase_order="New PO (optional)",
         description="New description (optional)"
     )
+    @app_commands.choices(
+        subteam=[
+            app_commands.Choice(name=member.value.title(), value=member.value)
+            for member in Subteam
+        ]
+    )
     async def edit_item(
         self,
         interaction: discord.Interaction,
@@ -204,7 +216,7 @@ class Inventory(commands.Cog):
                 item_name=item_name,
                 location=location,
                 quantity_total=quantity,
-                subteam=subteam,
+                subteam=Subteam(subteam) if subteam else None,
                 point_of_contact=point_of_contact.id if point_of_contact else None,
                 purchase_order=purchase_order,
                 description=description

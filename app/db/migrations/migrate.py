@@ -1,16 +1,18 @@
-# database/migrations/migrate.py
-import asyncpg
-from pathlib import Path
-from typing import List
+import asyncio
 import sys
+from pathlib import Path
+from typing import List, Final
+
+import asyncpg
+from app.config import DB_URL
+from app.utils.logger import logger
 
 class MigrationManager:
-    def __init__(self, database_url: str):
-        self.database_url = database_url
-        self.migrations_dir = Path(__file__).parent
+    def __init__(self, database_url: str) -> None:
+        self.database_url: str = database_url
+        self.migrations_dir: Final[Path] = Path(__file__).parent
     
-    async def init_migrations_table(self, conn):
-        """Create migrations tracking table"""
+    async def init_migrations_table(self, conn: asyncpg.Connection) -> None:
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS schema_migrations (
                 id SERIAL PRIMARY KEY,
@@ -18,166 +20,126 @@ class MigrationManager:
                 applied_at TIMESTAMPTZ DEFAULT NOW()
             )
         ''')
-        print("📋 Migrations table initialized")
+        logger.info("Migrations table initialized")
     
-    async def get_applied_migrations(self, conn) -> List[str]:
-        """Get list of already applied migrations"""
+    async def get_applied_migrations(self, conn: asyncpg.Connection) -> List[str]:
         rows = await conn.fetch(
             'SELECT migration_name FROM schema_migrations ORDER BY id'
         )
-        return [row['migration_name'] for row in rows]
+        return [dict(row)['migration_name'] for row in rows]
     
     def get_all_migration_files(self) -> List[Path]:
-        """Get all SQL migration files sorted by name"""
-        migrations = sorted(self.migrations_dir.glob('*.sql'))
-        return migrations
+        return sorted(self.migrations_dir.glob('*.sql'))
     
     def get_pending_migrations(self, applied: List[str]) -> List[Path]:
-        """Get SQL files that haven't been applied yet"""
-        all_migrations = self.get_all_migration_files()
+        all_migrations: List[Path] = self.get_all_migration_files()
         return [m for m in all_migrations if m.name not in applied]
     
-    async def apply_migration(self, conn, migration_path: Path):
-        """Apply a single migration file"""
-        print(f"  ⏳ Applying {migration_path.name}...")
+    async def apply_migration(self, conn: asyncpg.Connection, migration_path: Path) -> None:
+        logger.info(f"Applying {migration_path.name}...")
         
         try:
-            # Read SQL file
-            sql_content = migration_path.read_text(encoding='utf-8')
+            sql_content: str = migration_path.read_text(encoding='utf-8')
+            statements: List[str] = []
             
-            # Split by semicolons to handle multiple statements
-            # Remove comments and empty statements
-            statements = []
             for statement in sql_content.split(';'):
-                # Remove SQL comments (-- style)
-                lines = []
+                lines: List[str] = []
                 for line in statement.split('\n'):
-                    # Remove inline comments
                     if '--' in line:
                         line = line[:line.index('--')]
                     lines.append(line)
                 
-                statement = '\n'.join(lines).strip()
-                if statement:
-                    statements.append(statement)
+                clean_statement: str = '\n'.join(lines).strip()
+                if clean_statement:
+                    statements.append(clean_statement)
             
-            # Execute each statement
-            for statement in statements:
-                await conn.execute(statement)
+            for stmt in statements:
+                await conn.execute(stmt)
             
-            # Record migration as applied
             await conn.execute(
                 'INSERT INTO schema_migrations (migration_name) VALUES ($1)',
                 migration_path.name
             )
-            
-            print(f"  ✅ {migration_path.name} applied successfully")
+            logger.info(f"Applied successfully: {migration_path.name}")
             
         except Exception as e:
-            print(f"  ❌ Failed to apply {migration_path.name}: {e}")
+            logger.error(f"Failed to apply {migration_path.name}: {e}")
             raise
     
-    async def run_migrations(self):
-        """Run all pending migrations"""
-        conn = await asyncpg.connect(self.database_url)
+    async def run_migrations(self) -> None:
+        conn: asyncpg.Connection = await asyncpg.connect(self.database_url)
         
         try:
-            print("🔄 Starting migration process...")
-            
-            # Initialize migrations table
+            logger.info("Starting migration process")
             await self.init_migrations_table(conn)
             
-            # Get applied migrations
-            applied = await self.get_applied_migrations(conn)
-            print(f"📋 Applied migrations: {len(applied)}")
+            applied: List[str] = await self.get_applied_migrations(conn)
+            logger.info(f"Applied migrations count: {len(applied)}")
             
-            if applied:
-                for migration in applied:
-                    print(f"  ✓ {migration}")
+            for migration in applied:
+                logger.info(f"  [DONE] {migration}")
             
-            # Get pending migrations
-            pending = self.get_pending_migrations(applied)
+            pending: List[Path] = self.get_pending_migrations(applied)
             
             if not pending:
-                print("✨ All migrations are up to date!")
+                logger.info("All migrations are up to date")
                 return
             
-            print(f"\n🔄 Found {len(pending)} pending migration(s):")
-            for migration in pending:
-                print(f"  • {migration.name}")
+            logger.info(f"Found {len(pending)} pending migration(s)")
+            for m in pending:
+                logger.info(f"  - {m.name}")
             
-            print("\n⏳ Applying migrations...\n")
+            for m in pending:
+                await self.apply_migration(conn, m)
             
-            # Apply each pending migration
-            for migration in pending:
-                await self.apply_migration(conn, migration)
-            
-            print(f"\n✅ All {len(pending)} migration(s) completed successfully!")
-            
-        except Exception as e:
-            print(f"\n❌ Migration failed: {e}")
-            raise
+            logger.info(f"All {len(pending)} migration(s) completed successfully")
             
         finally:
             await conn.close()
     
-    async def status(self):
-        """Show migration status"""
-        conn = await asyncpg.connect(self.database_url)
+    async def status(self) -> None:
+        conn: asyncpg.Connection = await asyncpg.connect(self.database_url)
         
         try:
-            # Initialize table if needed
             await self.init_migrations_table(conn)
             
-            applied = await self.get_applied_migrations(conn)
-            pending = self.get_pending_migrations(applied)
-            all_migrations = self.get_all_migration_files()
+            applied: List[str] = await self.get_applied_migrations(conn)
+            pending: List[Path] = self.get_pending_migrations(applied)
+            all_files: List[Path] = self.get_all_migration_files()
             
-            print("📊 Migration Status")
-            print("=" * 50)
-            print(f"Total migrations: {len(all_migrations)}")
-            print(f"Applied: {len(applied)}")
-            print(f"Pending: {len(pending)}")
-            print()
+            logger.info("Migration Status Report")
+            logger.info(f"Total migrations: {len(all_files)}")
+            logger.info(f"Applied: {len(applied)}")
+            logger.info(f"Pending: {len(pending)}")
             
             if applied:
-                print("✅ Applied Migrations:")
-                for migration in applied:
-                    print(f"  ✓ {migration}")
-                print()
+                logger.info("Applied Migrations:")
+                for m_name in applied:
+                    logger.info(f"  [x] {m_name}")
             
             if pending:
-                print("⏳ Pending Migrations:")
-                for migration in pending:
-                    print(f"  • {migration.name}")
+                logger.info("Pending Migrations:")
+                for m_file in pending:
+                    logger.info(f"  [ ] {m_file.name}")
             else:
-                print("✨ All migrations up to date!")
+                logger.info("All migrations up to date")
             
         finally:
             await conn.close()
 
-# CLI runner
 if __name__ == '__main__':
-    import asyncio
-    from app.config import *
+    if not DB_URL:
+        sys.exit(1)
+
+    logger.info(f"Database: {DB_URL[:50]}...")
     
-    # Validate config
+    cmd: str = sys.argv[1] if len(sys.argv) > 1 else 'migrate'
+    mgr: MigrationManager = MigrationManager(DB_URL)
     
-    print(f"🗄️  Database: {DB_URL[:50]}...")
-    print()
-    
-    # Get command
-    command = sys.argv[1] if len(sys.argv) > 1 else 'migrate'
-    
-    manager = MigrationManager(DB_URL)
-    
-    if command == 'migrate' or command == 'up':
-        asyncio.run(manager.run_migrations())
-    elif command == 'status':
-        asyncio.run(manager.status())
+    if cmd in ('migrate', 'up'):
+        asyncio.run(mgr.run_migrations())
+    elif cmd == 'status':
+        asyncio.run(mgr.status())
     else:
-        print(f"❌ Unknown command: {command}")
-        print("\nAvailable commands:")
-        print("  migrate/up  - Run pending migrations")
-        print("  status      - Show migration status")
+        logger.error(f"Unknown command: {cmd}")
         sys.exit(1)

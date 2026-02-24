@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, computed_field, field_validator
 class Subteam(str, Enum):
     MECHANICAL = "mechanical"
     ELECTRICAL = "electrical"
-    EFS = "efs"
+    EFS = "embedded flight software"
     AUTONOMY = "autonomy"
     OPERATIONS = "operations"
 

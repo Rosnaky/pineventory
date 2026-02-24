@@ -44,7 +44,7 @@ class InventoryPaginatedView(discord.ui.View):
         embed.set_footer(text=f"Page {page + 1}/{self.max_pages}")
         return embed
     
-    @discord.ui.button(label="◀️ Previous", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.primary)
     async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page > 0:
             self.current_page -= 1
@@ -57,7 +57,7 @@ class InventoryPaginatedView(discord.ui.View):
         else:
             await interaction.response.defer()
     
-    @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page < self.max_pages - 1:
             self.current_page += 1

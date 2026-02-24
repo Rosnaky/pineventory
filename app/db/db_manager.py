@@ -40,7 +40,7 @@ class DatabaseManager:
                 DO UPDATE SET username = $2
             """, user_id, username)
 
-    async def ensure_guild_member(self, user_id: int, guild_id: int, username: str):
+    async def ensure_guild_member(self, guild_id: int, user_id: int, username: str):
         if not self.pool:
             raise DatabaseNotInitializedError()
         
