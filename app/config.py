@@ -11,3 +11,6 @@ GUILD_ID = os.getenv("GUILD_ID")
 # User interface
 STATUS_MESSAGE = "Pineventory ready!"
 COMMAND_PREFIX = "!"
+
+
+GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")

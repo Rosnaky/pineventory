@@ -6,13 +6,15 @@ from typing import Optional
 from datetime import datetime, timedelta
 from pydantic import ValidationError
 
+from app.bot import Bot
 from app.cogs.views.my_checkouts import MyCheckoutsView
+from app.db.db_manager import DatabaseManager
 from app.db.models import CheckoutRequest
 
 class Checkout(commands.Cog):
-    def __init__(self, bot, db_manager):
-        self.bot = bot
-        self.db = db_manager
+    def __init__(self, bot: Bot, db_manager: DatabaseManager):
+        self.bot: Bot = bot
+        self.db: DatabaseManager = db_manager
     
     @app_commands.command(name="checkout", description="Check out an item")
     @app_commands.describe(
@@ -33,7 +35,16 @@ class Checkout(commands.Cog):
         
         await self.db.ensure_user_exists(interaction.user.id, interaction.user.name)
         
-        item = await self.db.get_item(item_id)
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
+
+        item = await self.db.get_item(guild_id, item_id)
         if not item:
             await interaction.followup.send("Item not found", ephemeral=True)
             return
@@ -57,8 +68,17 @@ class Checkout(commands.Cog):
                 expected_return_date=expected_return,
                 notes=notes
             )
+
+            guild_id = interaction.guild_id
+
+            if not guild_id:
+                await interaction.response.send_message(
+                    "Could not detect server.", 
+                    ephemeral=True
+                )
+                return
             
-            checkout = await self.db.checkout_item(request, interaction.user.id)
+            checkout = await self.db.checkout_item(request, guild_id, interaction.user.id)
             
             if not checkout:
                 await interaction.followup.send("Checkout failed", ephemeral=True)
@@ -105,7 +125,16 @@ class Checkout(commands.Cog):
     async def return_item(self, interaction: discord.Interaction, checkout_id: int):
         await interaction.response.defer()
         
-        success = await self.db.return_item(checkout_id, interaction.user.id)
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
+
+        success = await self.db.return_item(checkout_id, guild_id, interaction.user.id)
         
         if not success:
             await interaction.followup.send(
@@ -127,12 +156,22 @@ class Checkout(commands.Cog):
     @app_commands.command(name="mycheckouts", description="View your active checkouts")
     async def my_checkouts(self, interaction: discord.Interaction):
         await interaction.response.defer()
+
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
         
-        checkouts = await self.db.get_active_checkouts(interaction.user.id)
+        checkouts = await self.db.get_active_checkouts(guild_id, interaction.user.id)
         
         if not checkouts:
             await interaction.followup.send("📦 You have no active checkouts!")
             return
+        
         
         embed = discord.Embed(
             title=f"📋 {interaction.user.name}'s Active Checkouts",
@@ -141,7 +180,7 @@ class Checkout(commands.Cog):
         )
         
         for checkout in checkouts[:10]:
-            item = await self.db.get_item(checkout.item_id)
+            item = await self.db.get_item(guild_id, checkout.item_id)
             if not item:
                 continue
             
@@ -174,8 +213,17 @@ class Checkout(commands.Cog):
     @app_commands.command(name="allcheckouts", description="View all active checkouts")
     async def all_checkouts(self, interaction: discord.Interaction):
         await interaction.response.defer()
+
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
         
-        checkouts = await self.db.get_active_checkouts()
+        checkouts = await self.db.get_active_checkouts(guild_id)
         
         if not checkouts:
             await interaction.followup.send("No active checkouts!")
@@ -196,7 +244,7 @@ class Checkout(commands.Cog):
         for user_id, user_cos in list(user_checkouts.items())[:10]:
             items_text = []
             for co in user_cos[:3]:
-                item = await self.db.get_item(co.item_id)
+                item = await self.db.get_item(guild_id, co.item_id)
                 if item:
                     overdue = "⚠️ " if co.is_overdue else ""
                     items_text.append(f"{overdue}{item.item_name} x{co.quantity}")

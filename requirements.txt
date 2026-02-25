@@ -2,3 +2,5 @@ discord.py
 dotenv
 pydantic
 asyncpg
+gspread
+oauth2client

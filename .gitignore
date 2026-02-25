@@ -1,4 +1,7 @@
+# Secrets
 .env
-.venv
+service-account.json
 
+# Local
+.venv
 __pycache__

@@ -15,7 +15,7 @@ async def main():
 
     bot = Bot()
     async with bot:
-        await bot.start(DISCORD_TOKEN)
+        await bot.start(DISCORD_TOKEN) # type: ignore
 
 
     logger.info("Initialization successful")
