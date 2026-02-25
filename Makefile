@@ -2,9 +2,9 @@ VENV := .venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 
-all: run
+.PHONY: all setup migrate run clean
 
-setup: $(VENV)/bin/activate
+all: setup run
 
 $(VENV)/bin/activate: requirements.txt
 	@echo "Creating virtual environment..."
@@ -15,10 +15,15 @@ $(VENV)/bin/activate: requirements.txt
 	@touch $(VENV)/bin/activate
 	@echo "Setup complete."
 
-run: setup
-	$(PYTHON) app/main.py
+setup: $(VENV)/bin/activate
+
+
+run: migrate
+	$(PYTHON) -m app.main
+
+migrate:
+	$(PYTHON) -m app.db.migrations.migrate
 
 clean:
 	rm -rf $(VENV)
 	find . -type d -name "__pycache__" -exec rm -rf {} +
-	
