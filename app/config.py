@@ -12,5 +12,9 @@ GUILD_ID = os.getenv("GUILD_ID")
 STATUS_MESSAGE = "Pineventory ready!"
 COMMAND_PREFIX = "!"
 
-
 GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+GOOGLE_SHEETS_FOLDER_ID = os.getenv("GOOGLE_SHEETS_FOLDER_ID")
+GOOGLE_API_SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive'
+]

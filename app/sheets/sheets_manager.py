@@ -4,8 +4,9 @@ from typing import Dict, List, Optional
 from oauth2client.service_account import ServiceAccountCredentials
 import gspread
 
-from app.config import GOOGLE_SERVICE_ACCOUNT_FILE
+from app.config import GOOGLE_SHEETS_FOLDER_ID, GOOGLE_SERVICE_ACCOUNT_FILE
 from app.db.models import Item, Checkout, AuditLog
+from app.sheets.auth import get_credentials
 from app.utils.logger import logger
 
 class SheetsManager:
@@ -13,7 +14,12 @@ class SheetsManager:
         self.service_account_file = GOOGLE_SERVICE_ACCOUNT_FILE
         self.client = None
         self._sheet_cache: Dict[int, gspread.Spreadsheet] = {}
-        self._sheet_to_header_len: Dict[str, int] = {}
+        self._sheet_to_header_len: Dict[str, int] = {
+            "Items": 11,
+            "Checkouts": 8,
+            "Audit": 5,
+            "Stats": 2
+        }
     
     def connect(self):
         try:
@@ -22,10 +28,7 @@ class SheetsManager:
                 'https://www.googleapis.com/auth/drive'
             ]
             
-            creds = ServiceAccountCredentials.from_json_keyfile_name(
-                self.service_account_file,
-                scope  # type: ignore
-            )
+            creds = get_credentials()
             
             self.client = gspread.authorize(creds)  # type: ignore
             
@@ -65,7 +68,7 @@ class SheetsManager:
         
         try:
             sheet_title = f"{guild_name} - Inventory Database"
-            spreadsheet = self.client.create(sheet_title)
+            spreadsheet = self.client.create(sheet_title, GOOGLE_SHEETS_FOLDER_ID)
             
             sheet_id = spreadsheet.id
             sheet_url = spreadsheet.url
@@ -119,8 +122,6 @@ class SheetsManager:
             "Purchase Order", "Description", "Created At"
         ]
         
-        self._sheet_to_header_len["Items"] = len(headers)
-        
         sheet.update(f"A1:{_get_column_letter(len(headers))}1", [headers])  # type: ignore
         sheet.format(f"A1:{_get_column_letter(len(headers))}1", {
             "backgroundColor": {"red": 0.2, "green": 0.6, "blue": 0.9},
@@ -137,8 +138,6 @@ class SheetsManager:
             "Checked Out", "Expected Return", "Days Out", "Notes"
         ]
         
-        self._sheet_to_header_len["Checkouts"] = len(headers)
-        
         sheet.update(f"A1:{_get_column_letter(len(headers))}1", [headers])  # type: ignore
         sheet.format(f"A1:{_get_column_letter(len(headers))}1", {
             "backgroundColor": {"red": 0.9, "green": 0.6, "blue": 0.2},
@@ -152,8 +151,6 @@ class SheetsManager:
         
         headers = ["Timestamp", "User", "Action", "Item ID", "Details"]
         
-        self._sheet_to_header_len["Audit"] = len(headers)
-        
         sheet.update(f"A1:{_get_column_letter(len(headers))}1", [headers])  # type: ignore
         sheet.format(f"A1:{_get_column_letter(len(headers))}1", {
             "backgroundColor": {"red": 0.5, "green": 0.5, "blue": 0.5},
@@ -164,8 +161,6 @@ class SheetsManager:
     
     async def _setup_stats_sheet(self, spreadsheet: gspread.Spreadsheet, guild_name: str):
         sheet = spreadsheet.worksheet("Stats")
-        
-        self._sheet_to_header_len["Stats"] = 2
         
         sheet.update("A1:B1", [[f"{guild_name} - Inventory Statistics", ""]])  # type: ignore
         sheet.format("A1:B1", {
@@ -186,7 +181,7 @@ class SheetsManager:
         ]
         
         for i, label in enumerate(stats_labels, start=2):
-            sheet.update(f'A{i}', label)
+            sheet.update(f'A{i}', [[label]])
         
         sheet.format('A:A', {"textFormat": {"bold": True}})
     
@@ -216,7 +211,7 @@ class SheetsManager:
                 ])
             
             if sheet.row_count > 1:
-                sheet.delete_rows(2, sheet.row_count)
+                sheet.batch_clear([f"A2:{_get_column_letter(self._sheet_to_header_len['Items'])}{sheet.row_count}"])
             
             if rows:
                 sheet.update(
@@ -259,7 +254,8 @@ class SheetsManager:
                     overdue_rows.append(i + 2)
             
             if sheet.row_count > 1:
-                sheet.delete_rows(2, sheet.row_count)
+                last_col = _get_column_letter(self._sheet_to_header_len['Checkouts'])
+                sheet.batch_clear([f"A2:{last_col}{sheet.row_count}"])
             
             if rows:
                 sheet.update(
@@ -308,7 +304,6 @@ class SheetsManager:
             
             sheet.update('B2:B8', [
                 [stats.get('total_items', 0)],
-                [stats.get('total_quantity', 0)],
                 [stats.get('checked_out_quantity', 0)],
                 [stats.get('active_checkouts', 0)],
                 [f"{stats.get('utilization_rate', 0):.1f}%"],
@@ -337,7 +332,6 @@ class SheetsManager:
         
         stats = {
             'total_items': len(items),
-            'total_quantity': sum(item.quantity_total for item in items),
             'checked_out_quantity': sum(item.quantity_checked_out for item in items),
             'active_checkouts': len(checkouts),
             'utilization_rate': (sum(item.quantity_checked_out for item in items) / sum(item.quantity_total for item in items) * 100) if items else 0

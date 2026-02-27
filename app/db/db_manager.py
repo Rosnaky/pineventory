@@ -409,7 +409,7 @@ class DatabaseManager:
                 rows = await conn.fetch("""
                     SELECT * FROM checkouts
                     WHERE guild_id = $1 AND returned_at IS NULL
-                    ORDER BY checkout_out_at DESC
+                    ORDER BY checked_out_at DESC
                 """, guild_id)
 
             return [Checkout.from_record(row) for row in rows]
