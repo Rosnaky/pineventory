@@ -12,7 +12,8 @@ class Bot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
-        intents.members = True  # For member mentions
+        intents.members = True
+        intents.guilds = True
         
         super().__init__(command_prefix=COMMAND_PREFIX, intents=intents)
         self.sheets = SheetsManager()
@@ -32,6 +33,7 @@ class Bot(commands.Bot):
         
         await self.load_extension('app.cogs.inventory')
         await self.load_extension('app.cogs.checkout')
+        await self.load_extension('app.cogs.admin')
         
         # Sync slash commands
         if GUILD_ID:
@@ -55,7 +57,6 @@ class Bot(commands.Bot):
             return
         
         logger.info("Checking for guilds without spreadsheets.")
-
         for guild in self.guilds:
             settings = await self.db.get_guild_settings(guild.id)
             
@@ -63,7 +64,7 @@ class Bot(commands.Bot):
                 logger.info(f"Creating Google Sheet for {guild.name}...")
                 await self.create_sheet_for_guild(guild)
 
-    async def on_guild_json(self, guild: discord.Guild):
+    async def on_guild_join(self, guild: discord.Guild):
         logger.info(f"Joined new guild: {guild.name} (ID: {guild.id})")
 
         await self.db.upsert_guild_settings(guild.id, guild.name)

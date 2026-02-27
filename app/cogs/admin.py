@@ -4,6 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from app.db.db_manager import DatabaseManager
+from app.utils.logger import logger
 
 class Admin(commands.Cog):
     def __init__(self, bot, db_manager: DatabaseManager):
@@ -11,17 +12,18 @@ class Admin(commands.Cog):
         self.db: DatabaseManager = db_manager
 
     # TODO: Fix
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:  # type: ignore[override]        
         if not isinstance(interaction.user, discord.Member):
             return False
-
-        if interaction.user.guild_permissions.administrator:
+        
+        if interaction.permissions.administrator:
             return True
         
         if not interaction.guild_id:
             return False
 
         is_admin = await self.db.is_admin(interaction.guild_id, interaction.user.id)
+        
         if not is_admin:
             await interaction.response.send_message(
                 "You need administrator permissions to use this command.", 
@@ -139,7 +141,7 @@ class Admin(commands.Cog):
                 ephemeral=True
             )
             return
-
+        
         is_discord_admin = target_user.guild_permissions.administrator
         is_bot_admin = await self.db.is_admin(guild_id, target_user.id)
         
