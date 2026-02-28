@@ -38,12 +38,19 @@ class Bot(commands.Bot):
         # Sync slash commands
         if GUILD_ID:
             guild = discord.Object(id=int(GUILD_ID))
+            
             self.tree.clear_commands(guild=None)
             await self.tree.sync()
+            self.tree.clear_commands(guild=guild)
+            await self.tree.sync(guild=guild)
+            
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
             logger.info(f"Synced commands to guild {GUILD_ID}")
         else:
+            for guild in self.guilds:
+                self.tree.clear_commands(guild=guild)
+                await self.tree.sync(guild=guild)
             await self.tree.sync()
             logger.info("Synced commands globally")
     
