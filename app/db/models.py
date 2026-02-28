@@ -2,7 +2,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 class Subteam(str, Enum):
     MECHANICAL = "mechanical"
@@ -16,8 +16,7 @@ class User(BaseModel):
     username: str
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_record(cls, record):
@@ -31,8 +30,21 @@ class GuildPermission(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_record(cls, record):
+        return cls(**record)
+
+class GuildSettings(BaseModel):
+    guild_id: int
+    guild_name: str
+    google_sheet_id: Optional[str] = None
+    google_sheet_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_record(cls, record):
@@ -53,19 +65,19 @@ class UserWithPermissions(BaseModel):
 
 class Item(BaseModel):
     id: int
+    guild_id: int = Field(description="Discord server/guild ID")
     item_name: str = Field(min_length=1, max_length=200)
     quantity_total: int = Field(ge=0, description="Total quantity owned")
     quantity_available: int = Field(ge=0, description="Available quantity")
     location: str = Field(min_length=1, max_length=100)
-    subteam: Subteam = Field(min_length=1, max_length=100)
+    subteam: Subteam
     point_of_contact: int = Field(description="Discord user ID")
     purchase_order: str = Field(min_length=1, description="PO number of thread URL")
     description: Optional[str] = Field(None, max_length=1000)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @field_validator('quantity_available')
     @classmethod
@@ -105,7 +117,7 @@ class CreateItemRequest(BaseModel):
     item_name: str = Field(min_length=1, max_length=200)
     quantity: int = Field(gt=0, description="Initial quantity")
     location: str = Field(min_length=1, max_length=100)
-    subteam: Subteam = Field(min_length=1, max_length=100)
+    subteam: Subteam
     point_of_contact: int = Field(description="Discord user id")
     purchase_order: str = Field(min_length=1)
     description: Optional[str] = Field(None, max_length=1000)
@@ -120,7 +132,7 @@ class UpdateItemRequest(BaseModel):
     item_name: Optional[str] = Field(None, min_length=1, max_length=200)
     quantity_total: Optional[int] = Field(None, ge=0)
     location: Optional[str] = Field(None, min_length=1, max_length=100)
-    subteam: Optional[Subteam] = Field(None, min_length=1, max_length=100)
+    subteam: Optional[Subteam] = None
     point_of_contact: Optional[int] = None
     purchase_order: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = Field(None, max_length=1000)
@@ -134,6 +146,7 @@ class UpdateItemRequest(BaseModel):
 
 class Checkout(BaseModel):
     id: int
+    guild_id: int
     item_id: int
     user_id: int = Field(description="Discord user who checked it out")
     quantity: int = Field(gt=0)
@@ -142,8 +155,7 @@ class Checkout(BaseModel):
     returned_at: Optional[datetime] = None
     notes: Optional[str] = Field(None, max_length=500)
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
     
     @computed_field
     @property
@@ -193,8 +205,7 @@ class AuditLog(BaseModel):
     details: str = Field(max_length=500)
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
     
     @classmethod
     def from_record(cls, record):

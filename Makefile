@@ -6,12 +6,12 @@ PIP := $(VENV)/bin/pip
 
 all: setup run
 
-$(VENV)/bin/activate: requirements.txt
+$(VENV)/bin/activate:
 	@echo "Creating virtual environment..."
 	python3 -m venv $(VENV)
 	@echo "Installing dependencies..."
 	$(PIP) install --upgrade pip
-	$(PIP) install -r requirements.txt
+	$(PIP) install -e .
 	@touch $(VENV)/bin/activate
 	@echo "Setup complete."
 

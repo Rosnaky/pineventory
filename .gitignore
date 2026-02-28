@@ -1,4 +1,10 @@
+# Secrets
 .env
-.venv
+service-account.json
+oauth_creds.json
+google_token.json
 
+# Local
+.venv
 __pycache__
+pineventory.egg-info

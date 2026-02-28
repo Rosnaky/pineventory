@@ -7,15 +7,17 @@ from discord.ext import commands
 from discord import app_commands
 from pydantic import ValidationError
 
+from app.bot import Bot
 from app.cogs.views.delete_confirmation_view import DeleteConfirmationView
 from app.cogs.views.inventory_paginated_view import InventoryPaginatedView
 from app.cogs.views.item_details_view import ItemDetailsView
+from app.db.db_manager import DatabaseManager
 from app.db.models import CreateItemRequest, Subteam, UpdateItemRequest
 
 class Inventory(commands.Cog):
-    def __init__(self, bot, db_manager):
+    def __init__(self, bot: Bot, db_manager: DatabaseManager):
         self.bot = bot
-        self.db = db_manager
+        self.db: DatabaseManager = db_manager
 
     @app_commands.command(name="additem", description="Add a new item to inventory")
     @app_commands.describe(
@@ -49,6 +51,15 @@ class Inventory(commands.Cog):
         await self.db.ensure_user_exists(interaction.user.id, interaction.user.name)
         await self.db.ensure_user_exists(point_of_contact.id, point_of_contact.name)
 
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
+
         try:
             request = CreateItemRequest(
                 item_name=item_name,
@@ -60,7 +71,7 @@ class Inventory(commands.Cog):
                 description=description
             )
 
-            item = await self.db.add_item(request, interaction.user.id)
+            item = await self.db.add_item(request, guild_id, interaction.user.id)
 
             embed = discord.Embed(
                 title="Item Added to Inventory",
@@ -109,7 +120,16 @@ class Inventory(commands.Cog):
     ):
         await interaction.response.defer()
 
-        items = await self.db.search_items(search, subteam, location)
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
+
+        items = await self.db.search_items(guild_id, search, subteam, location)
 
         if not items:
             await interaction.followup.send("No items found with your criteria")
@@ -125,13 +145,22 @@ class Inventory(commands.Cog):
     async def item_details(self, interaction: discord.Interaction, item_id: int):
         await interaction.response.defer()
 
-        item = await self.db.get_item(item_id)
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
+
+        item = await self.db.get_item(guild_id, item_id)
 
         if not item:
             await interaction.followup.send("Item not found", ephemeral=True)
             return
 
-        checkouts = await self.db.get_item_checkouts(item_id, active_only=True)
+        checkouts = await self.db.get_item_checkouts(guild_id, item_id, active_only=True)
 
         embed = discord.Embed(
             title=item.item_name,
@@ -206,7 +235,16 @@ class Inventory(commands.Cog):
     ):
         await interaction.response.defer()
 
-        item = await self.db.get_item(item_id)
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
+
+        item = await self.db.get_item(guild_id, item_id)
         if not item:
             await interaction.followup.send("Item not found", ephemeral=True)
             return
@@ -225,7 +263,7 @@ class Inventory(commands.Cog):
             if point_of_contact:
                 await self.db.ensure_user_exists(point_of_contact.id, point_of_contact.name)
             
-            updated_item = await self.db.update_item(item_id, request, interaction.user.id)
+            updated_item = await self.db.update_item(guild_id, item_id, request, interaction.user.id)
 
             if not updated_item:
                 await interaction.followup.send("Failed to update item", ephemeral=True)
@@ -242,8 +280,8 @@ class Inventory(commands.Cog):
                 changes.append(f"Name: {item.item_name} → {item_name}")
             if location and location != item.location:
                 changes.append(f"Location: {item.location} → {location}")
-            if quantity and quantity != item.quantity:
-                changes.append(f"Quantity: {item.quantity} → {quantity}")
+            if quantity and quantity != item.quantity_total:
+                changes.append(f"Quantity: {item.quantity_total} → {quantity}")
             if subteam and subteam != item.subteam:
                 changes.append(f"Subteam: {item.subteam} → {subteam}")
             if point_of_contact and point_of_contact.id != item.point_of_contact:
@@ -269,12 +307,21 @@ class Inventory(commands.Cog):
     async def delete_item(self, interaction: discord.Interaction, item_id: int):
         await interaction.response.defer()
 
-        item = await self.db.get_item(item_id)
+        guild_id = interaction.guild_id
+
+        if not guild_id:
+            await interaction.response.send_message(
+                "Could not detect server.", 
+                ephemeral=True
+            )
+            return
+
+        item = await self.db.get_item(guild_id, item_id)
         if not item:
             await interaction.followup.send("Item not found", ephemeral=True)
             return
         
-        checkouts = await self.db.get_item_checkouts(item_id, active_only=True)
+        checkouts = await self.db.get_item_checkouts(guild_id, item_id, active_only=True)
         if checkouts:
             await interaction.followup.send(
                 "Cannot delete **{item.item_name}** - it has {len(checkouts)} active checkout(s)!\n"
