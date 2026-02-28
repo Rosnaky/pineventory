@@ -38,24 +38,24 @@ class Bot(commands.Bot):
         # Sync slash commands
         if GUILD_ID:
             guild = discord.Object(id=int(GUILD_ID))
-            
-            self.tree.clear_commands(guild=None)
-            await self.tree.sync()
-            self.tree.clear_commands(guild=guild)
-            await self.tree.sync(guild=guild)
-            
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
             logger.info(f"Synced commands to guild {GUILD_ID}")
         else:
-            for guild in self.guilds:
-                self.tree.clear_commands(guild=guild)
-                await self.tree.sync(guild=guild)
             await self.tree.sync()
             logger.info("Synced commands globally")
     
     async def on_ready(self):
         logger.info(f'🤖 {self.user} is online!')
+        if not GUILD_ID:
+            logger.info("Scrubbing old guild commands to fix duplicates...")
+            for guild in self.guilds:
+                self.tree.clear_commands(guild=guild)
+                try:
+                    await self.tree.sync(guild=guild)
+                except Exception as e:
+                    logger.info(f"Couldn't clear {guild.name}: {e}")
+            logger.info("Scrub complete! You should only see Global commands now.")
 
         await self.setup_sheets_for_existing_guilds()
 
