@@ -156,9 +156,10 @@ class DatabaseManager:
         
         async with self.pool.acquire() as conn:
             await conn.execute("""
-                UPDATE guild_settings 
-                SET google_sheet_id = $2, google_sheet_url = $3, updated_at = NOW()
-                WHERE guild_id = $1
+                INSERT INTO guild_settings (guild_id, guild_name, google_sheet_id, google_sheet_url)
+                VALUES ($1, 'Unknown', $2, $3)
+                ON CONFLICT (guild_id)
+                DO UPDATE SET google_sheet_id = $2, google_sheet_url = $3, updated_at = NOW()
             """, guild_id, sheet_id, sheet_url)
 
     # ===== Item =====

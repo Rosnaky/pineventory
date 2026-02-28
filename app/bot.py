@@ -19,6 +19,8 @@ class Bot(commands.Bot):
         self.sheets = SheetsManager()
         self.db = DatabaseManager(DB_URL) # type: ignore
     
+
+    
     async def setup_hook(self):
         await self.db.connect()
         
@@ -61,7 +63,6 @@ class Bot(commands.Bot):
             settings = await self.db.get_guild_settings(guild.id)
             
             if not settings or not settings.google_sheet_id:
-                logger.info(f"Creating Google Sheet for {guild.name}...")
                 await self.create_sheet_for_guild(guild)
 
     async def on_guild_join(self, guild: discord.Guild):

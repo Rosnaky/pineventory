@@ -27,3 +27,13 @@ migrate:
 clean:
 	rm -rf $(VENV)
 	find . -type d -name "__pycache__" -exec rm -rf {} +
+
+# Tests
+test-up:
+	docker compose -f tests/docker-compose.test.yml up -d
+
+test-down:
+	docker compose -f tests/docker-compose.test.yml down
+
+test: test-up
+	$(PYTHON) -m pytest tests/ -v
