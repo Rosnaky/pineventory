@@ -19,8 +19,6 @@ class Bot(commands.Bot):
         self.sheets = SheetsManager()
         self.db = DatabaseManager(DB_URL) # type: ignore
     
-
-    
     async def setup_hook(self):
         await self.db.connect()
         
@@ -29,7 +27,7 @@ class Bot(commands.Bot):
             if connected:
                 self.db.set_sheets_manager(self.sheets)
 
-        print("Running database migrations...")
+        logger.info("Running database migrations...")
         migrator = MigrationManager(DB_URL) # type: ignore
         await migrator.run_migrations()
         
@@ -40,15 +38,17 @@ class Bot(commands.Bot):
         # Sync slash commands
         if GUILD_ID:
             guild = discord.Object(id=int(GUILD_ID))
+            self.tree.clear_commands(guild=None)
+            await self.tree.sync()
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
-            print(f"Synced commands to guild {GUILD_ID}")
+            logger.info(f"Synced commands to guild {GUILD_ID}")
         else:
             await self.tree.sync()
-            print("Synced commands globally")
+            logger.info("Synced commands globally")
     
     async def on_ready(self):
-        print(f'🤖 {self.user} is online!')
+        logger.info(f'🤖 {self.user} is online!')
 
         await self.setup_sheets_for_existing_guilds()
 
