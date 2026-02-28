@@ -296,12 +296,13 @@ class DatabaseManager:
             if not item:
                 return False
             
-            await conn.execute("DELETE from items WHERE id = $1", item_id)
-
+            # Need to log before deleting to avoid violating fkey constraint
             await self.log_action(
                 guild_id, deleted_by, "delete_item", item_id,
                 f"Deleted {item.item_name}"
             )
+
+            await conn.execute("DELETE from items WHERE id = $1", item_id)
 
             await self.trigger_sheets_sync(guild_id)
 
@@ -351,12 +352,12 @@ class DatabaseManager:
 
                 checkout = Checkout.from_record(checkout_row)
 
-                await self.log_action(
-                    guild_id, user_id, "checkout", request.item_id,
-                    f"Checked out {request.quantity}x {item_row["item_name"]}"
-                )
+            await self.log_action(
+                guild_id, user_id, "checkout", request.item_id,
+                f"Checked out {request.quantity}x {item_row["item_name"]}"
+            )
 
-                return checkout
+            return checkout
             
     async def return_item(self, checkout_id: int, guild_id: int, returned_by: int) -> bool:
         if not self.pool:
@@ -387,12 +388,12 @@ class DatabaseManager:
                     WHERE id = $1 AND guild_id = $2
                 """, checkout_row["item_id"], guild_id, checkout_row["quantity"])
 
-                await self.log_action(
-                    guild_id, returned_by, "return", checkout_row["item_id"],
-                    f"Returned {checkout_row["quantity"]}x {checkout_row["item_name"]}"
-                )
+            await self.log_action(
+                guild_id, returned_by, "return", checkout_row["item_id"],
+                f"Returned {checkout_row["quantity"]}x {checkout_row["item_name"]}"
+            )
 
-                return True
+            return True
 
     async def get_active_checkouts(self, guild_id: int, user_id: Optional[int] = None) -> List[Checkout]:
         if not self.pool:
@@ -404,7 +405,7 @@ class DatabaseManager:
                     SELECT * FROM checkouts
                     WHERE guild_id = $1 AND user_id = $2 AND returned_at IS NULL
                     ORDER BY checked_out_at DESC
-                """, guild_id, user_id, guild_id)
+                """, guild_id, user_id)
             else:
                 rows = await conn.fetch("""
                     SELECT * FROM checkouts

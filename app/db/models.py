@@ -2,7 +2,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 class Subteam(str, Enum):
     MECHANICAL = "mechanical"
@@ -16,8 +16,7 @@ class User(BaseModel):
     username: str
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_record(cls, record):
@@ -31,8 +30,7 @@ class GuildPermission(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_record(cls, record):
@@ -46,8 +44,7 @@ class GuildSettings(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_record(cls, record):
@@ -80,8 +77,7 @@ class Item(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @field_validator('quantity_available')
     @classmethod
@@ -159,8 +155,7 @@ class Checkout(BaseModel):
     returned_at: Optional[datetime] = None
     notes: Optional[str] = Field(None, max_length=500)
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
     
     @computed_field
     @property
@@ -210,8 +205,7 @@ class AuditLog(BaseModel):
     details: str = Field(max_length=500)
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
     
     @classmethod
     def from_record(cls, record):

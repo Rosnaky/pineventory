@@ -1,7 +1,0 @@
-discord.py
-dotenv
-pydantic
-asyncpg
-gspread
-oauth2client
-google-api-python-client
