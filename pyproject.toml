@@ -11,7 +11,8 @@ dependencies = [
     "oauth2client",
     "google-api-python-client",
     "google-auth-oauthlib",
-    "pytest-asyncio"
+    "pytest-asyncio",
+    "aiohttp"
 ]
 
 [project.optional-dependencies]
