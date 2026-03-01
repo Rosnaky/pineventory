@@ -158,7 +158,7 @@ async def test_checkout_creates_audit_log(db):
         user_id=12,
     )
 
-    logs = await db.get_audit_log(limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     checkout_logs = [l for l in logs if l.action == "checkout"]
     assert len(checkout_logs) >= 1
 
@@ -259,7 +259,7 @@ async def test_return_creates_audit_log(db):
 
     await db.return_item(checkout.id, guild_id=1234, returned_by=12)
 
-    logs = await db.get_audit_log(limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     return_logs = [l for l in logs if l.action == "return"]
     assert len(return_logs) >= 1
 

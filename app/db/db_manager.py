@@ -1,4 +1,5 @@
 
+import asyncio
 from typing import List, Optional
 
 import asyncpg
@@ -194,7 +195,7 @@ class DatabaseManager:
                 f"Added {request.quantity}x {request.item_name}"
             )
 
-            await self.trigger_sheets_sync(guild_id)
+            self.trigger_sheets_sync(guild_id)
 
             return item
 
@@ -281,7 +282,7 @@ class DatabaseManager:
                     f"Updated: {changes}"
                 )
 
-                await self.trigger_sheets_sync(guild_id)
+                self.trigger_sheets_sync(guild_id)
 
                 return item
             
@@ -305,7 +306,7 @@ class DatabaseManager:
 
             await conn.execute("DELETE from items WHERE id = $1", item_id)
 
-            await self.trigger_sheets_sync(guild_id)
+            self.trigger_sheets_sync(guild_id)
 
             return True
 
@@ -358,6 +359,8 @@ class DatabaseManager:
                 f"Checked out {request.quantity}x {item_row["item_name"]}"
             )
 
+            self.trigger_sheets_sync(guild_id)
+
             return checkout
             
     async def return_item(self, checkout_id: int, guild_id: int, returned_by: int) -> bool:
@@ -393,6 +396,8 @@ class DatabaseManager:
                 guild_id, returned_by, "return", checkout_row["item_id"],
                 f"Returned {checkout_row["quantity"]}x {checkout_row["item_name"]}"
             )
+
+            self.trigger_sheets_sync(guild_id)
 
             return True
 
@@ -470,26 +475,27 @@ class DatabaseManager:
             raise DatabaseNotInitializedError()
         
         async with self.pool.acquire() as conn:
-            await conn.execute("""
+            row = await conn.execute("""
                 INSERT INTO audit_log (guild_id, user_id, action, item_id, details)
                 VALUES ($1, $2, $3, $4, $5)
             """, guild_id, user_id, action, item_id, details)
+                
 
-    async def get_audit_log(self, limit: int = 50) -> List[AuditLog]:
+    async def get_audit_log(self, guild_id: int, limit: int = 50) -> List[AuditLog]:
         if not self.pool:
             raise DatabaseNotInitializedError()
         
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("""
                 SELECT * FROM audit_log
+                WHERE guild_id = $1
                 ORDER BY created_at DESC
-                LIMIT $1
-            """, limit)
+                LIMIT $2
+            """, guild_id, limit)
             return [AuditLog.from_record(row) for row in rows]
         
     # ===== Spreadsheets =====
-    async def trigger_sheets_sync(self, guild_id: int):
+    def trigger_sheets_sync(self, guild_id: int):
         if self.sheets_manager and self.sheets_manager.client:
-            import asyncio
             asyncio.create_task(self.sheets_manager.full_sync(self, guild_id))
 

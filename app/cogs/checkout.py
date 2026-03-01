@@ -172,9 +172,10 @@ class Checkout(commands.Cog):
             await interaction.followup.send("📦 You have no active checkouts!")
             return
         
+        user_display = interaction.user.display_name
         
         embed = discord.Embed(
-            title=f"📋 {interaction.user.name}'s Active Checkouts",
+            title=f"📋 {user_display}'s Active Checkouts",
             color=discord.Color.blue(),
             description=f"Total: {len(checkouts)} checkout(s)"
         )
@@ -243,19 +244,22 @@ class Checkout(commands.Cog):
         
         for user_id, user_cos in list(user_checkouts.items())[:10]:
             items_text = []
-            for co in user_cos[:3]:
+            for co in user_cos[:5]:
                 item = await self.db.get_item(guild_id, co.item_id)
                 if item:
                     overdue = "⚠️ " if co.is_overdue else ""
                     items_text.append(f"{overdue}{item.item_name} x{co.quantity}")
             
-            if len(user_cos) > 3:
-                items_text.append(f"... and {len(user_cos) - 3} more")
+            if len(user_cos) > 5:
+                items_text.append(f"... and {len(user_cos) - 5} more")
             
+            user = interaction.guild.get_member(user_id) if interaction.guild else None
+            user_display = user.display_name if user else f"User {user_id}"
+
             embed.add_field(
-                name=f"<@{user_id}>",
+                name=user_display,
                 value="\n".join(items_text) if items_text else "No items",
-                inline=True
+                inline=False
             )
         
         if len(user_checkouts) > 10:

@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
@@ -167,16 +167,23 @@ class Checkout(BaseModel):
     @property
     def is_overdue(self) -> bool:
         """Check if checkout is overdue"""
-        if not self.expected_return_date or self.returned_at:
+        if self.returned_at or not self.expected_return_date:
             return False
-        return datetime.now() > self.expected_return_date
+        # Use timezone-aware datetime
+        now = datetime.now(timezone.utc)
+        return now > self.expected_return_date
     
     @computed_field
     @property
     def days_checked_out(self) -> int:
-        """Calculate how many days item has been checked out"""
-        end_time = self.returned_at or datetime.now()
-        return (end_time - self.checked_out_at).days
+        """Calculate days since checkout"""
+        if self.returned_at:
+            delta = self.returned_at - self.checked_out_at
+        else:
+            # Use timezone-aware datetime
+            now = datetime.now(timezone.utc)
+            delta = now - self.checked_out_at
+        return delta.days
     
     @classmethod
     def from_record(cls, record):

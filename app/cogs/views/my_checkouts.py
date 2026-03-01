@@ -27,8 +27,15 @@ class ReturnButton(discord.ui.Button):
             logger.error("No view found in Return Button")
             return
         
+        if not interaction.guild_id:
+            await interaction.response.send_message(
+                "This command must be used in a server.",
+                ephemeral=True
+            )
+            return
+        
         db = self.view.db
-        success = await db.return_item(self.checkout.id, interaction.user.id)
+        success = await db.return_item(self.checkout.id, interaction.guild_id, interaction.user.id)
         
         if success:
             await interaction.response.send_message(

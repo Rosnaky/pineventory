@@ -28,7 +28,7 @@ async def test_log_action(db):
 
     await db.log_action(1234, 12, "test_action", None, "Test details")
 
-    logs = await db.get_audit_log(limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     assert len(logs) >= 1
     assert logs[0].action == "test_action"
     assert logs[0].details == "Test details"
@@ -43,7 +43,7 @@ async def test_audit_log_ordering(db):
     await db.log_action(1234, 12, "second", None, "Second action")
     await db.log_action(1234, 12, "third", None, "Third action")
 
-    logs = await db.get_audit_log(limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     assert len(logs) == 3
     # Most recent first
     assert logs[0].action == "third"
@@ -58,7 +58,7 @@ async def test_audit_log_limit(db):
     for i in range(10):
         await db.log_action(1234, 12, f"action_{i}", None, f"Detail {i}")
 
-    logs = await db.get_audit_log(limit=5)
+    logs = await db.get_audit_log(guild_id=1234, limit=5)
     assert len(logs) == 5
 
 
@@ -68,7 +68,7 @@ async def test_audit_log_with_item_id(db):
 
     await db.log_action(1234, 12, "custom", item.id, "Item-specific action")
 
-    logs = await db.get_audit_log(limit=1)
+    logs = await db.get_audit_log(guild_id=1234, limit=1)
     assert logs[0].item_id == item.id
 
 
@@ -85,7 +85,7 @@ async def test_full_workflow_audit_trail(db):
 
     await db.return_item(co.id, guild_id=1234, returned_by=12)
 
-    logs = await db.get_audit_log(limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     actions = [l.action for l in logs]
 
     assert "add_item" in actions

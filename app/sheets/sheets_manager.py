@@ -181,7 +181,7 @@ class SheetsManager:
         ]
         
         for i, label in enumerate(stats_labels, start=2):
-            sheet.update(f'A{i}', [[label]])
+            sheet.update(f'A{i}', [[label]]) # type: ignore
         
         sheet.format('A:A', {"textFormat": {"bold": True}})
     
@@ -273,6 +273,40 @@ class SheetsManager:
         except Exception as e:
             logger.error(f"Failed to sync checkouts for guild {guild_id}: {e}")
     
+    async def sync_audit_log(self, guild_id: int, sheet_id: str, logs: List[AuditLog]):
+        spreadsheet = await self.get_sheet_for_guild(guild_id, sheet_id)
+        if not spreadsheet:
+            logger.warning(f"Could not get spreadsheet for guild {guild_id}")
+            return
+        
+        try:
+            sheet = spreadsheet.worksheet("Audit Log")
+            
+            rows = []
+            for log in logs:
+                rows.append([
+                    log.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    f"User ID: {log.user_id}",
+                    log.action,
+                    str(log.item_id) if log.item_id else "N/A",
+                    log.details
+                ])
+            
+            if sheet.row_count > 1:
+                last_col = _get_column_letter(self._sheet_to_header_len['Audit'])
+                sheet.batch_clear([f"A2:{last_col}{sheet.row_count}"])
+            
+            if rows:
+                sheet.update(
+                    f"A2:{_get_column_letter(self._sheet_to_header_len['Audit'])}{len(rows) + 1}",
+                    rows  # type: ignore
+                )
+            
+            logger.info(f"Synced {len(rows)} audit log entries for guild {guild_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to sync audit log for guild {guild_id}: {e}")
+
     async def append_audit_log(self, guild_id: int, sheet_id: str, log_entry: AuditLog):
         spreadsheet = await self.get_sheet_for_guild(guild_id, sheet_id)
         if not spreadsheet:
@@ -324,11 +358,13 @@ class SheetsManager:
         
         items = await db_manager.search_items(guild_id)
         checkouts = await db_manager.get_active_checkouts(guild_id)
+        audit_logs = await db_manager.get_audit_log(guild_id, limit=100)
         
         items_map = {item.id: item.item_name for item in items}
         
         await self.sync_items(guild_id, settings.google_sheet_id, items)
         await self.sync_checkouts(guild_id, settings.google_sheet_id, checkouts, items_map)
+        await self.sync_audit_log(guild_id, settings.google_sheet_id, audit_logs)
         
         stats = {
             'total_items': len(items),
