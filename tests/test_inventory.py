@@ -47,7 +47,7 @@ async def test_add_item_creates_audit_log(db):
         added_by=12,
     )
 
-    logs = await db.get_audit_log(guild_id=0, limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     assert len(logs) >= 1
     latest = logs[0]
     assert latest.action == "add_item"
@@ -421,7 +421,7 @@ async def test_update_item_creates_audit_log(db):
         updated_by=12,
     )
 
-    logs = await db.get_audit_log(guild_id=0, limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     edit_logs = [l for l in logs if l.action == "edit_item"]
     assert len(edit_logs) >= 1
 
@@ -510,7 +510,7 @@ async def test_delete_item_creates_audit_log(db):
 
     await db.delete_item(1234, item.id, deleted_by=12)
 
-    logs = await db.get_audit_log(guild_id=0, limit=10)
+    logs = await db.get_audit_log(guild_id=1234, limit=10)
     delete_logs = [l for l in logs if l.action == "delete_item"]
     assert len(delete_logs) >= 1
 
