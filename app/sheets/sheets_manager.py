@@ -181,7 +181,7 @@ class SheetsManager:
         ]
         
         for i, label in enumerate(stats_labels, start=2):
-            sheet.update(f'A{i}', [[label]])
+            sheet.update(f'A{i}', [[label]]) # type: ignore
         
         sheet.format('A:A', {"textFormat": {"bold": True}})
     

@@ -1,4 +1,5 @@
 
+import asyncio
 from typing import List, Optional
 
 import asyncpg
@@ -194,7 +195,7 @@ class DatabaseManager:
                 f"Added {request.quantity}x {request.item_name}"
             )
 
-            await self.trigger_sheets_sync(guild_id)
+            self.trigger_sheets_sync(guild_id)
 
             return item
 
@@ -281,7 +282,7 @@ class DatabaseManager:
                     f"Updated: {changes}"
                 )
 
-                await self.trigger_sheets_sync(guild_id)
+                self.trigger_sheets_sync(guild_id)
 
                 return item
             
@@ -305,7 +306,7 @@ class DatabaseManager:
 
             await conn.execute("DELETE from items WHERE id = $1", item_id)
 
-            await self.trigger_sheets_sync(guild_id)
+            self.trigger_sheets_sync(guild_id)
 
             return True
 
@@ -358,6 +359,8 @@ class DatabaseManager:
                 f"Checked out {request.quantity}x {item_row["item_name"]}"
             )
 
+            self.trigger_sheets_sync(guild_id)
+
             return checkout
             
     async def return_item(self, checkout_id: int, guild_id: int, returned_by: int) -> bool:
@@ -393,6 +396,8 @@ class DatabaseManager:
                 guild_id, returned_by, "return", checkout_row["item_id"],
                 f"Returned {checkout_row["quantity"]}x {checkout_row["item_name"]}"
             )
+
+            self.trigger_sheets_sync(guild_id)
 
             return True
 
@@ -488,8 +493,7 @@ class DatabaseManager:
             return [AuditLog.from_record(row) for row in rows]
         
     # ===== Spreadsheets =====
-    async def trigger_sheets_sync(self, guild_id: int):
+    def trigger_sheets_sync(self, guild_id: int):
         if self.sheets_manager and self.sheets_manager.client:
-            import asyncio
             asyncio.create_task(self.sheets_manager.full_sync(self, guild_id))
 
