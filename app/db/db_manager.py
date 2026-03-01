@@ -475,21 +475,23 @@ class DatabaseManager:
             raise DatabaseNotInitializedError()
         
         async with self.pool.acquire() as conn:
-            await conn.execute("""
+            row = await conn.execute("""
                 INSERT INTO audit_log (guild_id, user_id, action, item_id, details)
                 VALUES ($1, $2, $3, $4, $5)
             """, guild_id, user_id, action, item_id, details)
+                
 
-    async def get_audit_log(self, limit: int = 50) -> List[AuditLog]:
+    async def get_audit_log(self, guild_id: int, limit: int = 50) -> List[AuditLog]:
         if not self.pool:
             raise DatabaseNotInitializedError()
         
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("""
                 SELECT * FROM audit_log
+                WHERE guild_id = $1
                 ORDER BY created_at DESC
-                LIMIT $1
-            """, limit)
+                LIMIT $2
+            """, guild_id, limit)
             return [AuditLog.from_record(row) for row in rows]
         
     # ===== Spreadsheets =====
