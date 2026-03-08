@@ -19,6 +19,8 @@ GOOGLE_API_SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
 ]
+GOOGLE_TOKEN_FILE = "google_token.json"
+GOOGLE_CREDS_FILE = "oauth_creds.json"
 
 # Web server
 WEB_SERVER_PORT=8080

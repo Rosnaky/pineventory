@@ -199,8 +199,8 @@ class Inventory(commands.Cog):
             embed.add_field(name="Currently Checked Out To", value=checkout_text, inline=False)
         
         embed.set_footer(text=f"Last updated")
-        
-        view = ItemDetailsView(item, self.db)
+
+        view = ItemDetailsView(item, await self.db.get_active_checkouts(guild_id), self.db)
         
         await interaction.followup.send(embed=embed, view=view)
 
