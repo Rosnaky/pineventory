@@ -22,7 +22,6 @@ class DeleteConfirmationView(discord.ui.View):
             )
             return
 
-
         success = await self.db.delete_item(interaction.guild_id, self.item.id, interaction.user.id)
         
         if success:
