@@ -1,6 +1,5 @@
 import discord
 
-
 class DeleteConfirmationView(discord.ui.View):
     def __init__(self, item, db_manager, user_id):
         super().__init__(timeout=60)
