@@ -324,7 +324,7 @@ class Inventory(commands.Cog):
         checkouts = await self.db.get_item_checkouts(guild_id, item_id, active_only=True)
         if checkouts:
             await interaction.followup.send(
-                "Cannot delete **{item.item_name}** - it has {len(checkouts)} active checkout(s)!\n"
+                f"Cannot delete **{item.item_name}** - it has {len(checkouts)} active checkout(s)!\n"
                 "Please return all items before deleting.",
                 ephemeral=True
             )
