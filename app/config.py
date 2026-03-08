@@ -9,7 +9,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = os.getenv("GUILD_ID")
 
 # User interface
-STATUS_MESSAGE = "Pineventory ready!"
+STATUS_MESSAGE = "There will be a day that I will be used for the last time. Scary."
 COMMAND_PREFIX = "!"
 
 # Google Services
