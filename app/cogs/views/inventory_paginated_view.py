@@ -4,12 +4,12 @@ from app.db.models import Item
 
 
 class InventoryPaginatedView(discord.ui.View):
-    def __init__(self, items: list[Item], db_manager):
+    def __init__(self, items: list[Item], db_manager, items_per_page = 5):
         super().__init__(timeout=300)
         self.items = items
         self.db = db_manager
         self.current_page = 0
-        self.items_per_page = 5
+        self.items_per_page = items_per_page
         self.max_pages = max((len(items) - 1) // self.items_per_page + 1, 1)
 
         if self.max_pages <= 1:
@@ -28,7 +28,7 @@ class InventoryPaginatedView(discord.ui.View):
 
         for item in page_items:
             checked_out = (
-                f"  ({item.quantity_checked_out} out)" if item.quantity_checked_out > 0 else ""
+                f"  ({item.quantity_checked_out} checked out)" if item.quantity_checked_out > 0 else ""
             )
 
             if item.is_po_link:
