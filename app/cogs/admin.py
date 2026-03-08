@@ -244,11 +244,28 @@ class Admin(commands.Cog):
         
         settings = await self.db.get_guild_settings(guild_id)
         if not settings or not settings.google_sheet_id:
-            await interaction.followup.send(
-                "No Google Sheet found for this server!",
-                ephemeral=True
-            )
-            return
+            try:
+                sheet_id, sheet_url = await self.bot.sheets.create_sheet_for_guild(
+                    guild_id, interaction.guild.name
+                )
+
+                spreadsheet = await self.bot.sheets.get_sheet_for_guild(guild_id, sheet_id)
+                if spreadsheet:
+                    await self.bot.sheets.make_sheet_public(spreadsheet)
+
+                await self.db.upsert_guild_settings(
+                    guild_id, interaction.guild.name, sheet_id, sheet_url
+                )
+
+                settings = await self.db.get_guild_settings(guild_id)
+
+            except Exception as e:
+                logger.error(f"Failed to create sheet for guild {guild_id}: {e}")
+                await interaction.followup.send(
+                    "Failed to create Google Sheet. Please try again later.",
+                    ephemeral=True,
+                )
+                return
         
         await self.bot.sheets.full_sync(self.db, guild_id)
         
@@ -259,7 +276,7 @@ class Admin(commands.Cog):
         )
         embed.add_field(
             name="View Sheet",
-            value=f"[Click here]({settings.google_sheet_url})",
+            value=f"[Click here]({settings.google_sheet_url})", # type: ignore
             inline=False
         )
         

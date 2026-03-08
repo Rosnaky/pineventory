@@ -120,8 +120,6 @@ class Bot(commands.Bot):
                     await channel.send(embed=embed)
                     break
             
-            logger.info(f"Google Sheet created for {guild.name}: {sheet_url}")
-            
         except Exception as e:
             logger.error(f"Failed to create sheet for {guild.name}: {e}")
 
