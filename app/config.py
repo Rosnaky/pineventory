@@ -9,7 +9,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = os.getenv("GUILD_ID")
 
 # User interface
-STATUS_MESSAGE = "Pineventory ready!"
+STATUS_MESSAGE = "There will be a day when I will be used for the last time. Scary."
 COMMAND_PREFIX = "!"
 
 # Google Services
@@ -19,6 +19,8 @@ GOOGLE_API_SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
 ]
+GOOGLE_TOKEN_FILE = "google_token.json"
+GOOGLE_CREDS_FILE = "oauth_creds.json"
 
 # Web server
 WEB_SERVER_PORT=8080

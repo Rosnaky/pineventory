@@ -69,6 +69,17 @@ class DatabaseManager:
                 user_id
             )
             return User.from_record(row) if row else None
+        
+    async def get_users_batch(self, user_ids: list[int]) -> Optional[dict[int, User]]:
+        if not self.pool:
+            raise DatabaseNotInitializedError()
+        
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM users where user_id = ANY($1)",
+                list(set(user_ids))
+            )
+            return {row["user_id"]: User.from_record(row) for row in rows}
 
     async def get_user_permissions(self, guild_id: int, user_id: int) -> Optional[GuildPermission]:
         if not self.pool:

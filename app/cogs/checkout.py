@@ -158,57 +158,25 @@ class Checkout(commands.Cog):
         await interaction.response.defer()
 
         guild_id = interaction.guild_id
-
         if not guild_id:
-            await interaction.response.send_message(
-                "Could not detect server.", 
-                ephemeral=True
-            )
+            await interaction.followup.send("Could not detect server.", ephemeral=True)
             return
-        
+
         checkouts = await self.db.get_active_checkouts(guild_id, interaction.user.id)
-        
+
         if not checkouts:
-            await interaction.followup.send("📦 You have no active checkouts!")
+            await interaction.followup.send("You have no active checkouts.")
             return
-        
-        user_display = interaction.user.display_name
-        
-        embed = discord.Embed(
-            title=f"📋 {user_display}'s Active Checkouts",
-            color=discord.Color.blue(),
-            description=f"Total: {len(checkouts)} checkout(s)"
-        )
-        
-        for checkout in checkouts[:10]:
-            item = await self.db.get_item(guild_id, checkout.item_id)
-            if not item:
-                continue
-            
-            field_value = f"**Quantity:** {checkout.quantity}\n"
-            field_value += f"**Checked out:** <t:{int(checkout.checked_out_at.timestamp())}:R>\n"
-            
-            if checkout.expected_return_date:
-                field_value += f"**Expected return:** <t:{int(checkout.expected_return_date.timestamp())}:D>\n"
-                if checkout.is_overdue:
-                    field_value += "⚠️ **OVERDUE**\n"
-            
-            if checkout.notes:
-                field_value += f"**Notes:** {checkout.notes[:50]}\n"
-            
-            field_value += f"**Checkout ID:** {checkout.id}"
-            
-            embed.add_field(
-                name=f"{item.item_name}",
-                value=field_value,
-                inline=False
-            )
-        
-        if len(checkouts) > 10:
-            embed.set_footer(text=f"Showing 10 of {len(checkouts)} checkouts")
-        
-        view = MyCheckoutsView(checkouts[:10], self.db)
-        
+
+        item_ids = {co.item_id for co in checkouts}
+        items_by_id = {}
+        for item_id in item_ids:
+            item = await self.db.get_item(guild_id, item_id)
+            if item:
+                items_by_id[item_id] = item.item_name
+
+        view = MyCheckoutsView(checkouts, items_by_id, self.db)
+        embed = view.create_embed(interaction.user.display_name)
         await interaction.followup.send(embed=embed, view=view)
     
     @app_commands.command(name="allcheckouts", description="View all active checkouts")
