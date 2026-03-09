@@ -168,60 +168,6 @@ class Admin(commands.Cog):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="sheetinfo", description="Get info about this server's Google Sheet")
-    async def sheet_info(self, interaction: discord.Interaction):
-        guild_id = interaction.guild_id
-
-        if not guild_id or not isinstance(interaction.guild, discord.Guild):
-            await interaction.response.send_message(
-                "This command can only be used in servers.",
-                ephemeral=True
-            )
-            return
-        
-        settings = await self.db.get_guild_settings(guild_id)
-        
-        if not settings or not settings.google_sheet_id:
-            await interaction.response.send_message(
-                "No Google Sheet has been created for this server yet!",
-                ephemeral=True
-            )
-            return
-        
-        embed = discord.Embed(
-            title=f"Inventory Sheet for {interaction.guild.name}",
-            color=discord.Color.blue()
-        )
-        
-        embed.add_field(
-            name="Sheet URL",
-            value=f"[Click to view]({settings.google_sheet_url})",
-            inline=False
-        )
-        
-        embed.add_field(
-            name="Auto-Sync",
-            value="Enabled - Updates automatically on changes",
-            inline=True
-        )
-        
-        embed.add_field(
-            name="Public Access",
-            value="Anyone with the link can view (read-only)",
-            inline=True
-        )
-        
-        embed.add_field(
-            name="Manual Sync",
-            value="Use `/syncsheets` to force an update",
-            inline=False
-        )
-        
-        if settings.updated_at:
-            embed.set_footer(text=f"Last updated: {settings.updated_at.strftime('%Y-%m-%d %H:%M')}")
-        
-        await interaction.response.send_message(embed=embed)
-
     @app_commands.command(name="syncsheets", description="Manually sync inventory to Google Sheets")
     async def sync_sheets(self, interaction: discord.Interaction):
         await interaction.response.defer()

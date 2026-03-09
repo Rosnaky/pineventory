@@ -34,6 +34,7 @@ class Bot(commands.Bot):
         await self.load_extension('app.cogs.inventory')
         await self.load_extension('app.cogs.checkout')
         await self.load_extension('app.cogs.admin')
+        await self.load_extension('app.cogs.general')
         
         # Sync slash commands
         if GUILD_ID:
