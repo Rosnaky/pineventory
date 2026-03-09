@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 from pydantic import ValidationError
 
 from app.bot import Bot
-from app.cogs.views.my_checkouts import MyCheckoutsView
+from app.cogs.views.all_checkouts_view import AllCheckoutsView
+from app.cogs.views.my_checkouts_view import MyCheckoutsView
 from app.db.db_manager import DatabaseManager
 from app.db.models import CheckoutRequest
 
@@ -186,10 +187,11 @@ class Checkout(commands.Cog):
         guild_id = interaction.guild_id
 
         if not guild_id:
-            await interaction.response.send_message(
-                "Could not detect server.", 
-                ephemeral=True
-            )
+            await interaction.followup.send("Could not detect server.", ephemeral=True)
+            return
+        
+        if not interaction.guild:
+            await interaction.followup.send("This command must be used in a server.", ephemeral=True)
             return
         
         checkouts = await self.db.get_active_checkouts(guild_id)
@@ -198,42 +200,23 @@ class Checkout(commands.Cog):
             await interaction.followup.send("No active checkouts!")
             return
         
-        embed = discord.Embed(
-            title="📋 All Active Checkouts",
-            color=discord.Color.blue(),
-            description=f"Total: {len(checkouts)} active checkout(s)"
-        )
-        
         user_checkouts = {}
         for checkout in checkouts:
             if checkout.user_id not in user_checkouts:
                 user_checkouts[checkout.user_id] = []
             user_checkouts[checkout.user_id].append(checkout)
         
-        for user_id, user_cos in list(user_checkouts.items())[:10]:
-            items_text = []
-            for co in user_cos[:5]:
-                item = await self.db.get_item(guild_id, co.item_id)
-                if item:
-                    overdue = "⚠️ " if co.is_overdue else ""
-                    items_text.append(f"{overdue}{item.item_name} x{co.quantity}")
-            
-            if len(user_cos) > 5:
-                items_text.append(f"... and {len(user_cos) - 5} more")
-            
-            user = interaction.guild.get_member(user_id) if interaction.guild else None
-            user_display = user.display_name if user else f"User {user_id}"
-
-            embed.add_field(
-                name=user_display,
-                value="\n".join(items_text) if items_text else "No items",
-                inline=False
-            )
+        item_ids = {co.item_id for co in checkouts}
+        items_by_id = {}
+        for item_id in item_ids:
+            item = await self.db.get_item(guild_id, item_id)
+            if item:
+                items_by_id[item_id] = item.item_name
         
-        if len(user_checkouts) > 10:
-            embed.set_footer(text=f"Showing 10 of {len(user_checkouts)} users")
+        view = AllCheckoutsView(user_checkouts, items_by_id, interaction.guild)
+        embed = view.create_embed()
         
-        await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed, view=view)
 
 async def setup(bot):
     await bot.add_cog(Checkout(bot, bot.db))
