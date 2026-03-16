@@ -45,6 +45,7 @@ class SheetsManager:
     async def get_sheet_for_guild(
         self, guild_id: int, sheet_id: str
     ) -> Optional[gspread.Spreadsheet]:
+        self.connect()
         if not self.client:
             return None
 
@@ -62,6 +63,7 @@ class SheetsManager:
     async def create_sheet_for_guild(
         self, guild_id: int, guild_name: str
     ) -> tuple[str, str]:
+        self.connect()
         if not self.client:
             raise Exception("Google Sheets client not connected")
 
