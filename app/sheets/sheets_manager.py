@@ -229,11 +229,11 @@ class SheetsManager:
         self._apply_default_font(sheet, 2)
         self._auto_resize_columns(spreadsheet, sheet, 2)
 
-    async def sync_items(self, guild_id: int, sheet_id: str, items: List[Item], usernames: dict[int, str]):
+    async def sync_items(self, guild_id: int, sheet_id: str, items: List[Item], usernames: dict[int, str]) -> bool:
         spreadsheet = await self.get_sheet_for_guild(guild_id, sheet_id)
         if not spreadsheet:
             logger.warning(f"Could not get spreadsheet for guild {guild_id}")
-            return
+            return False
 
         try:
             sheet = spreadsheet.worksheet("Items")
@@ -266,17 +266,19 @@ class SheetsManager:
 
             self._auto_resize_columns(spreadsheet, sheet, num_cols)
             logger.info(f"Synced {len(items)} items for guild {guild_id}")
+            return True
 
         except Exception as e:
             logger.error(f"Failed to sync items for guild {guild_id}: {e}")
+            return False
 
     async def sync_checkouts(
         self, guild_id: int, sheet_id: str, checkouts: List[Checkout], items_map: dict, usernames: dict[int, str]
-    ):
+    ) -> bool:
         spreadsheet = await self.get_sheet_for_guild(guild_id, sheet_id)
         if not spreadsheet:
             logger.warning(f"Could not get spreadsheet for guild {guild_id}")
-            return
+            return False
 
         try:
             sheet = spreadsheet.worksheet("Active Checkouts")
@@ -322,15 +324,17 @@ class SheetsManager:
 
             self._auto_resize_columns(spreadsheet, sheet, num_cols)
             logger.info(f"Synced {len(checkouts)} checkouts for guild {guild_id}")
+            return True
 
         except Exception as e:
             logger.error(f"Failed to sync checkouts for guild {guild_id}: {e}")
+            return False
 
-    async def sync_audit_log(self, guild_id: int, sheet_id: str, logs: List[AuditLog], usernames: dict[int, str]):
+    async def sync_audit_log(self, guild_id: int, sheet_id: str, logs: List[AuditLog], usernames: dict[int, str]) -> bool:
         spreadsheet = await self.get_sheet_for_guild(guild_id, sheet_id)
         if not spreadsheet:
             logger.warning(f"Could not get spreadsheet for guild {guild_id}")
-            return
+            return False
 
         try:
             sheet = spreadsheet.worksheet("Audit Log")
@@ -359,9 +363,11 @@ class SheetsManager:
 
             self._auto_resize_columns(spreadsheet, sheet, num_cols)
             logger.info(f"Synced {len(rows)} audit log entries for guild {guild_id}")
+            return True
 
         except Exception as e:
             logger.error(f"Failed to sync audit log for guild {guild_id}: {e}")
+            return False
 
     async def append_audit_log(self, guild_id: int, sheet_id: str, log_entry: AuditLog):
         spreadsheet = await self.get_sheet_for_guild(guild_id, sheet_id)
@@ -384,10 +390,10 @@ class SheetsManager:
         except Exception as e:
             logger.error(f"Failed to append audit log for guild {guild_id}: {e}")
 
-    async def update_stats(self, guild_id: int, sheet_id: str, stats: dict):
+    async def update_stats(self, guild_id: int, sheet_id: str, stats: dict) -> bool:
         spreadsheet = await self.get_sheet_for_guild(guild_id, sheet_id)
         if not spreadsheet:
-            return
+            return False
 
         try:
             sheet = spreadsheet.worksheet("Stats")
@@ -403,15 +409,17 @@ class SheetsManager:
             ])  # type: ignore
 
             self._auto_resize_columns(spreadsheet, sheet, 2)
+            return True
 
         except Exception as e:
             logger.error(f"Failed to update stats for guild {guild_id}: {e}")
+            return False
 
-    async def full_sync(self, db_manager, guild_id: int):
+    async def full_sync(self, db_manager, guild_id: int) -> bool:
         settings = await db_manager.get_guild_settings(guild_id)
         if not settings or not settings.google_sheet_id:
             logger.warning(f"No Google Sheet configured for guild {guild_id}")
-            return
+            return False
 
         logger.info(f"Starting full Google Sheets sync for guild {guild_id}...")
 
@@ -429,9 +437,9 @@ class SheetsManager:
 
         items_map = {item.id: item.item_name for item in items}
 
-        await self.sync_items(guild_id, settings.google_sheet_id, items, usernames)
-        await self.sync_checkouts(guild_id, settings.google_sheet_id, checkouts, items_map, usernames)
-        await self.sync_audit_log(guild_id, settings.google_sheet_id, audit_logs, usernames)
+        success = await self.sync_items(guild_id, settings.google_sheet_id, items, usernames)
+        success |= await self.sync_checkouts(guild_id, settings.google_sheet_id, checkouts, items_map, usernames)
+        success |= await self.sync_audit_log(guild_id, settings.google_sheet_id, audit_logs, usernames)
 
         total_qty = sum(item.quantity_total for item in items)
         checked_out_qty = sum(item.quantity_checked_out for item in items)
@@ -443,9 +451,13 @@ class SheetsManager:
             "active_checkouts": len(checkouts),
             "utilization_rate": (checked_out_qty / total_qty * 100) if total_qty else 0,
         }
-        await self.update_stats(guild_id, settings.google_sheet_id, stats)
+        success |= await self.update_stats(guild_id, settings.google_sheet_id, stats)
 
-        logger.info("Google Sheets full sync complete")
+        if not success:
+            logger.info("Google Sheets full sync complete")
+            return False
+        
+        return True
 
 
 def _get_column_letter(n: int):
