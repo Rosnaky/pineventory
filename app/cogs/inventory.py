@@ -302,6 +302,9 @@ class Inventory(commands.Cog):
                 f"**Validation Error:**\n{errors}",
                 ephemeral=True
             )
+        except ValueError as e:
+            await interaction.followup.send(str(e), ephemeral=True)
+            
     @app_commands.command(name="deleteitem", description="Delete an item from inventory")
     @app_commands.describe(item_id="The item ID to delete")
     async def delete_item(self, interaction: discord.Interaction, item_id: int):
