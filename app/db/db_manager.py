@@ -281,6 +281,27 @@ class DatabaseManager:
                 set_clauses.append(f"{k} = ${param_count}")
                 params.append(v)
 
+            if "quantity_total" in updates:
+                current = await conn.fetchrow(
+                    "SELECT quantity_total, quantity_available FROM items WHERE id = $1 AND guild_id = $2",
+                    item_id, guild_id
+                )
+                
+                if current:
+                    checked_out = current["quantity_total"] - current["quantity_available"]
+                    new_total = updates["quantity_total"]
+                    
+                    if new_total < checked_out:
+                        raise ValueError(
+                            f"Cannot set total to {new_total}. There are {checked_out} items currently checked out."
+                        )
+                
+                param_count += 1
+                set_clauses.append(
+                    f"quantity_available = ${param_count} - (quantity_total - quantity_available)"
+                )
+                params.append(updates["quantity_total"])
+
             query = f"UPDATE items SET {', '.join(set_clauses)} WHERE id = $1 AND guild_id = $2 RETURNING *"
             row = await conn.fetchrow(query, *params)
 
