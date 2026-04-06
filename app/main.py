@@ -26,13 +26,9 @@ async def main():
             # Blocking loop
             await bot.start(DISCORD_TOKEN) # type: ignore
         except discord.HTTPException as e:
-            if e.status == 429:
-                logger.warning(f"Rate limited. Retrying in {retry_delay} seconds...")
-                await asyncio.sleep(retry_delay)
-                retry_delay *= RETRY_DELAY_S_MULTIPLIER;
-            else:
-                logger.warning(f"HTTP Error during bot startup: {e}")
-                raise
+            logger.warning(f"HTTP Error. Retrying in {retry_delay} seconds...")
+            await asyncio.sleep(retry_delay)
+            retry_delay *= RETRY_DELAY_S_MULTIPLIER;
         except Exception as e:
             logger.warning(f"Error during bot startup: {e}")
             raise
