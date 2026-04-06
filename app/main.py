@@ -42,7 +42,7 @@ async def main():
 
     await web_runner.cleanup()
 
-    logger.info("Initialization failed")
+    logger.error("Initialization failed")
 
 
 if __name__ == "__main__":
