@@ -44,6 +44,5 @@ async def main():
 
     logger.error("Initialization failed")
 
-
 if __name__ == "__main__":
     asyncio.run(main())
