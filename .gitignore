@@ -1,6 +1,5 @@
 # Secrets
 .env
-service-account.json
 oauth_creds.json
 google_token.json
 
