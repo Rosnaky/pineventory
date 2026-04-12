@@ -33,18 +33,6 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-    
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Restart container
-        run: az container restart --resource-group pineventory --name pineventory
 
   release:
     runs-on: ubuntu-latest
