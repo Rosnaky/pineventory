@@ -37,7 +37,7 @@ Restart container
 az container restart --resource-group <rg-name> --name pineventory
 ```
 
-Deleting the container
+Delete the container
 ```
 az container delete --resource-group <rg-name> --name pineventory --yes
 ```
