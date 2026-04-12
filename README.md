@@ -32,6 +32,11 @@ az container create \
   --azure-file-volume-mount-path /app/config
 ```
 
+Restart container
+```
+az container restart --resource-group <rg-name> --name pineventory
+```
+
 Deleting the container
 ```
 az container delete --resource-group <rg-name> --name pineventory --yes
